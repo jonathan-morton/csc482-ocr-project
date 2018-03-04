@@ -3,6 +3,7 @@ import struct
 from PIL import Image
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
 #%%
 size_record = 8199
 file_count = 33
@@ -40,6 +41,7 @@ def get_all_jis_codes(japanese_chars):
     return codes
 #%%
 codes = get_all_jis_codes(["三","一","二","四","五","六","七","八", "九","十",])
+
 #%%
 def read_record_ETL8G(f):
     s = f.read(size_record)
@@ -60,12 +62,25 @@ def read_kanji(jis_codes):
                 for j in range(956):
                     record = read_record_ETL8G(f)
                     if(hex(record[1]) in jis_codes):
-                        records.append(record)
+                        record_list = list(record)
+                        kanji_image = Image.eval(record[-1], lambda x: 255 - x * 16)
+                        kanji_np_array = np.array(kanji_image)
+                        record_list[-1] = kanji_np_array
+                        new_record = tuple(record_list)
+                        records.append(new_record)
     return records
 
 records = read_kanji(codes)
 #%%
+def test_train_data(records):
+    np.random.shuffle(records)
+    X = [record[-1] for record in records]
+    Y = [record[1] for record in records]
+    train_x, train_y, test_x, test_y = train_test_split(X, Y, test_size=0.25)
+    return train_x, train_y, test_x, test_y
 
+train_x, train_y, test_x, test_y = test_train_data(records)
+#%%
 def test_etlcdb():
     filename = 'ETL8G/ETL8G_01'
     id_record = 0
