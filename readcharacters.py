@@ -2,10 +2,13 @@ __author__ = 'Jonathan Morton'
 import struct
 from PIL import Image
 import numpy as np
+from numpy import argmax
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import OneHotEncoder
 
 size_record = 8199
 file_count = 33
@@ -87,12 +90,22 @@ def read_kanji(jis_codes):
 records = read_kanji(codes)
 #%%
 import imageprocessing
-import model
+import cnn_model
 #%%
 large_image = records[30][-1]
 small_image = imageprocessing.process_image(large_image)
 plt.interactive(True)
 plt.imshow(small_image, cmap='gray') # https://intellij-support.jetbrains.com/hc/en-us/community/posts/115000143610-Problems-with-Interactive-Plotting-in-Debug-Mode-in-PyCharm-Version-2017-1
+#%%
+def preprocess_images(records):
+    new_records = []
+    for record in records:
+        list_record = list(record)
+        list_record[-1] = imageprocessing.process_image(record[-1])
+        new_records.append(tuple(list_record))
+    return new_records
+
+records = preprocess_images(records)
 #%%
 # TODO not working yet
 from keras.utils import to_categorical
@@ -101,15 +114,46 @@ def test_train_data(records):
     np.random.shuffle(records)
     X = [record[-1] for record in records]
     X = np.asarray(X)
+    X = X.reshape(X.shape[0], X.shape[1], X.shape[2], 1)
+    X = X.astype('float32') / 255
 
-    Y = [record[1] for record in records]
+    Y = [hex(record[1])[2:].upper() for record in records]
+    Y = np.array(Y)
+    num_classes = np.unique(Y).size
     x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size=0.25)
 
-    return x_train, x_test, y_train, y_test
+    return num_classes, x_train, x_test, y_train, y_test
 
-x_train, x_test, y_train, y_test  = test_train_data(records)
-y_train = to_categorical(y_train)
-y_test = to_categorical(y_test)
+
+def one_hot_encode(y_labels):
+    label_encoder = LabelEncoder()
+    integer_encoded = label_encoder.fit_transform(y_labels)
+    onehot_encoder = OneHotEncoder(sparse=False)
+    integer_encoded = integer_encoded.reshape(len(integer_encoded), 1)
+    onehot_encoded = onehot_encoder.fit_transform(integer_encoded)
+    return label_encoder, onehot_encoded
+
+def look_up_label(label_encoder, encoded_row, get_kanji=False):
+    inverted_hex = label_encoder.inverse_transform([argmax(encoded_row)])
+    if not get_kanji:
+        return inverted_hex[0]
+    jis_data = JisData(codes_filename)
+    return jis_data.get_character(inverted_hex[0].upper())
+
+num_classes, x_train, x_test, y_train, y_test  = test_train_data(records)
+y_train_encoder, y_train_categorical = one_hot_encode(y_train)
+y_test_encoder, y_test_categorical = one_hot_encode(y_test)
+
 #%%
+cnn_model = cnn_model.get_cnn_model(imageprocessing.IMAGE_RESIZE, num_classes) #TODO Fix number
 
+#%%
+import tensorflow as tf
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+sess = tf.Session(config = config)
+cnn_model.fit(x_train, y_train_categorical, epochs=20, batch_size=8)
+
+#%%
+test_loss, test_accuracy = cnn_model.evaluate(x_test, y_test_categorical)
 #test_etlcdb()
