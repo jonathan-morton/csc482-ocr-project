@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
+import imageprocessing
+import cnn_model
 
 size_record = 8199
 file_count = 33
@@ -47,6 +49,9 @@ def get_all_jis_codes(japanese_chars):
     return codes
 
 codes = get_all_jis_codes(["月","火","水","木","金","土","日"])
+
+
+# codes = get_all_jis_codes(["月","火"])
 
 #%%
 def read_record_ETL8G(f):
@@ -89,14 +94,6 @@ def read_kanji(jis_codes):
 
 records = read_kanji(codes)
 #%%
-import imageprocessing
-import cnn_model
-#%%
-large_image = records[30][-1]
-small_image = imageprocessing.process_image(large_image)
-plt.interactive(True)
-plt.imshow(small_image, cmap='gray') # https://intellij-support.jetbrains.com/hc/en-us/community/posts/115000143610-Problems-with-Interactive-Plotting-in-Debug-Mode-in-PyCharm-Version-2017-1
-#%%
 def preprocess_images(records):
     new_records = []
     for record in records:
@@ -107,15 +104,18 @@ def preprocess_images(records):
 
 records = preprocess_images(records)
 #%%
-# TODO not working yet
+plt.interactive(True)
+plt.imshow(records[70][-1],
+           cmap='gray')  # https://intellij-support.jetbrains.com/hc/en-us/community/posts/115000143610-Problems-with-Interactive-Plotting-in-Debug-Mode-in-PyCharm-Version-2017-1
+# %%
 from keras.utils import to_categorical
 
 def test_train_data(records):
-    np.random.shuffle(records)
+    #np.random.shuffle(records)
     X = [record[-1] for record in records]
     X = np.asarray(X)
     X = X.reshape(X.shape[0], X.shape[1], X.shape[2], 1)
-    X = X.astype('float32') / 255
+    X = X.astype('float32')
 
     Y = [hex(record[1])[2:].upper() for record in records]
     Y = np.array(Y)
@@ -125,6 +125,22 @@ def test_train_data(records):
     return num_classes, x_train, x_test, y_train, y_test
 
 
+# def test_train_data(records):
+#     np.random.shuffle(records)
+#     X = [record[-1] for record in records]
+#     X = np.asarray(X)
+#     X = X.reshape(X.shape[0], X.shape[1], X.shape[2], 1)
+#     X = X.astype('float32') / 255
+#
+#     Y = [record[1] for record in records]
+#     Y = np.array(Y)
+#     num_classes = np.unique(Y).size
+#     x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size=0.25)
+#
+#     return num_classes, x_train, x_test, y_train, y_test
+
+# %%
+#TODO bug suspects
 def one_hot_encode(y_labels):
     label_encoder = LabelEncoder()
     integer_encoded = label_encoder.fit_transform(y_labels)
@@ -141,9 +157,9 @@ def look_up_label(label_encoder, encoded_row, get_kanji=False):
     return jis_data.get_character(inverted_hex[0].upper())
 
 num_classes, x_train, x_test, y_train, y_test  = test_train_data(records)
+
 y_train_encoder, y_train_categorical = one_hot_encode(y_train)
 y_test_encoder, y_test_categorical = one_hot_encode(y_test)
-
 #%%
 cnn_model = cnn_model.get_cnn_model(imageprocessing.IMAGE_RESIZE, num_classes) #TODO Fix number
 
@@ -152,8 +168,10 @@ import tensorflow as tf
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 sess = tf.Session(config = config)
-cnn_model.fit(x_train, y_train_categorical, epochs=20, batch_size=8)
-
-#%%
+cnn_model.fit(x_train, y_train_categorical, epochs=100, batch_size=16)
+# %%
+cnn_model.evaluate(x_test, y_test_categorical)
 test_loss, test_accuracy = cnn_model.evaluate(x_test, y_test_categorical)
+
+print(f'accuracy = {test_accuracy}, loss = {test_loss}')
 #test_etlcdb()
