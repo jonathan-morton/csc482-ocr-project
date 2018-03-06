@@ -43,7 +43,7 @@ def get_all_jis_codes(japanese_chars):
         codes.append(jis_data.get_jis_code(char))
     return codes
 
-codes = get_all_jis_codes(["月"])
+codes = get_all_jis_codes(["月","火","水","木","金","土","日"])
 
 #%%
 def read_record_ETL8G(f):
@@ -58,7 +58,7 @@ def read_kanji(jis_codes):
     records = []
     count = 0
     jis_data = JisData(codes_filename)
-    charSet = set()
+    # charSet = set()
     last_file_count = 33 #33 files
     ary = np.zeros([len(jis_codes), 160, 127, 128], dtype=np.uint8)
     for i in range(1,last_file_count+1):
@@ -73,17 +73,18 @@ def read_kanji(jis_codes):
                 for j in range(956):
                     record = read_record_ETL8G(f)
                     #print(jis_data.get_character(hex(record[1])[2:]))
-                    if(hex(record[1]) in jis_codes):
-                        charSet.add(hex(record[1])[2:])
+                    hex_code = "0x" + hex(record[1])[2:].upper()
+                    if(hex_code in jis_codes):
+                        # charSet.add(hex(record[1])[2:])
                         record_list = list(record)
                         kanji_image = Image.eval(record[-1], lambda x: 255 - x * 16)
                         kanji_np_array = np.array(kanji_image)
                         record_list[-1] = kanji_np_array
                         new_record = tuple(record_list)
                         records.append(new_record)
-    return charSet, records
+    return records
 
-charSet, records = read_kanji(codes)
+records = read_kanji(codes)
 #%%
 import imageprocessing
 import model
@@ -93,6 +94,7 @@ small_image = imageprocessing.process_image(large_image)
 plt.interactive(True)
 plt.imshow(small_image, cmap='gray') # https://intellij-support.jetbrains.com/hc/en-us/community/posts/115000143610-Problems-with-Interactive-Plotting-in-Debug-Mode-in-PyCharm-Version-2017-1
 #%%
+# TODO not working yet
 from keras.utils import to_categorical
 
 def test_train_data(records):
@@ -101,13 +103,13 @@ def test_train_data(records):
     X = np.asarray(X)
 
     Y = [record[1] for record in records]
-    train_x, train_y, test_x, test_y = train_test_split(X, Y, test_size=0.25)
+    x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size=0.25)
 
-    return train_x, train_y, test_x, test_y
+    return x_train, x_test, y_train, y_test
 
-train_x, train_y, test_x, test_y = test_train_data(records)
-# train_y = to_categorical(train_y)
-# test_y = to_categorical(test_y)
+x_train, x_test, y_train, y_test  = test_train_data(records)
+y_train = to_categorical(y_train)
+y_test = to_categorical(y_test)
 #%%
 
 #test_etlcdb()
