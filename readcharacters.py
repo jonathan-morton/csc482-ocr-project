@@ -1,16 +1,17 @@
 __author__ = 'Jonathan Morton'
 import struct
-from PIL import Image
-import numpy as np
-from numpy import argmax
-import pandas as pd
-from sklearn.model_selection import train_test_split
+
 import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
+import numpy as np
+import pandas as pd
+from PIL import Image
+from numpy import argmax
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
+
+import cnn_model as cnnm
 import imageprocessing
-import cnn_model
 
 size_record = 8199
 file_count = 33
@@ -108,7 +109,6 @@ plt.interactive(True)
 plt.imshow(records[70][-1],
            cmap='gray')  # https://intellij-support.jetbrains.com/hc/en-us/community/posts/115000143610-Problems-with-Interactive-Plotting-in-Debug-Mode-in-PyCharm-Version-2017-1
 # %%
-from keras.utils import to_categorical
 
 def test_train_data(records):
     #np.random.shuffle(records)
@@ -124,23 +124,7 @@ def test_train_data(records):
 
     return num_classes, x_train, x_test, y_train, y_test
 
-
-# def test_train_data(records):
-#     np.random.shuffle(records)
-#     X = [record[-1] for record in records]
-#     X = np.asarray(X)
-#     X = X.reshape(X.shape[0], X.shape[1], X.shape[2], 1)
-#     X = X.astype('float32') / 255
-#
-#     Y = [record[1] for record in records]
-#     Y = np.array(Y)
-#     num_classes = np.unique(Y).size
-#     x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size=0.25)
-#
-#     return num_classes, x_train, x_test, y_train, y_test
-
 # %%
-#TODO bug suspects
 def one_hot_encode(y_labels):
     label_encoder = LabelEncoder()
     integer_encoded = label_encoder.fit_transform(y_labels)
@@ -161,17 +145,22 @@ num_classes, x_train, x_test, y_train, y_test  = test_train_data(records)
 y_train_encoder, y_train_categorical = one_hot_encode(y_train)
 y_test_encoder, y_test_categorical = one_hot_encode(y_test)
 #%%
-cnn_model = cnn_model.get_cnn_model(imageprocessing.IMAGE_RESIZE, num_classes) #TODO Fix number
+cnn_model = cnnm.get_cnn_model(imageprocessing.IMAGE_RESIZE, num_classes)  # TODO Fix number
 
 #%%
 import tensorflow as tf
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 sess = tf.Session(config = config)
-cnn_model.fit(x_train, y_train_categorical, epochs=100, batch_size=16)
+
+metrics = cnnm.Metrics()
+epochs = 200
+cnn_model.fit(x_train, y_train_categorical,
+              validation_data=(x_test, y_test_categorical), epochs=epochs, batch_size=8, callbacks=[metrics])
 # %%
-cnn_model.evaluate(x_test, y_test_categorical)
+# cnn_model.evaluate(x_test, y_test_categorical)
 test_loss, test_accuracy = cnn_model.evaluate(x_test, y_test_categorical)
 
-print(f'accuracy = {test_accuracy}, loss = {test_loss}')
+print(f'accuracy = {test_accuracy}, loss = {test_loss}\n')
+print(f'precision = {metrics.val_precisions}\n, recalls = {metrics.val_recalls}\n')
 #test_etlcdb()
