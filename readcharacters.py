@@ -1,10 +1,13 @@
 __author__ = 'Jonathan Morton'
+import pickle
 import struct
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from PIL import Image
+from keras.models import load_model as keras_load
+from keras.preprocessing.image import ImageDataGenerator
 from numpy import argmax
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
@@ -170,9 +173,7 @@ def look_up_label(label_encoder, encoded_row, get_kanji=False):
     return jis_data.get_character(inverted_hex[0].upper())
 
 
-# %%
-
-def generate_model_parameters(records):
+def generate_model_parameters(records, model_name):
     num_classes, x_train, x_test, y_train, y_test = test_train_data(records)
 
     y_train_encoder, y_train_categorical = one_hot_encode(y_train)
@@ -180,6 +181,7 @@ def generate_model_parameters(records):
     model = cnnm.get_cnn_model(imageprocessing.IMAGE_RESIZE, num_classes)
     return {
         "model": model,
+        "model_name": model_name,
         "num_classes": num_classes,
         "x_train": x_train,
         "x_test": x_test,
@@ -189,8 +191,6 @@ def generate_model_parameters(records):
         "y_test_categorical": y_test_categorical
     }
 
-
-# %%
 def fit_model(model_parameters, epochs=200, use_datagen=False):
     metrics = cnnm.Metrics()
     model = model_parameters["model"]
@@ -200,8 +200,28 @@ def fit_model(model_parameters, epochs=200, use_datagen=False):
     x_test = model_parameters["x_test"]
     y_test_categorical = model_parameters["y_test_categorical"]
 
-    model.fit(x_train, y_train_categorical,
-              validation_data=(x_test, y_test_categorical), epochs=epochs, batch_size=8, callbacks=[metrics])
+    batch_size = 8
+    if use_datagen:
+        datagen = ImageDataGenerator(
+            rotation_range=20,
+            width_shift_range=0.2,
+            height_shift_range=0.2,
+            shear_range=0.2,
+            fill_mode="constant"
+        )
+        model.fit_generator(datagen.flow(x_train, y_train_categorical, batch_size=batch_size),
+                            steps_per_epoch=len(x_train) / batch_size,
+                            validation_data=(x_test, y_test_categorical),
+                            epochs=epochs,
+                            callbacks=[metrics]
+                            )
+    else:
+        model.fit(x_train, y_train_categorical,
+                  validation_data=(x_test, y_test_categorical), epochs=epochs, batch_size=batch_size,
+                  callbacks=[metrics]
+                  )
+
+    model_parameters["metrics"] = metrics
 
 
 def evaluate_model(model_parameters):
@@ -209,14 +229,34 @@ def evaluate_model(model_parameters):
     y_test_categorical = model_parameters["y_test_categorical"]
     model = model_parameters["model"]
     test_loss, test_accuracy = model.evaluate(x_test, y_test_categorical)
+
     return test_loss, test_accuracy
 
 
-resize_model_params = generate_model_parameters(resize_records)
-sparse_model_params = generate_model_parameters(sparse_records)
-noisy_sparse_model_params = generate_model_parameters(noisy_sparse_records)
-all_mixed_model_params = generate_model_parameters(all_mixed_records)
-all_augmented_model_params = generate_model_parameters(all_mixed_records)
+def save_model(model_parameters):
+    model = model_parameters["model"]
+    name = model_parameters["model_name"]
+    metrics = model_parameters["metrics"]
+    model.save(f"model-{name}.h5")
+
+    with open(f"model-{name}-metrics.p", 'wb') as fp:
+        metrics_to_save = {"precisions": metrics.val_precisions, "recalls": metrics.val_recalls}
+        pickle.dump(metrics_to_save, fp)
+
+
+def load_model_data(model_name):
+    loaded_model = keras_load(f"{model_name}.h5")
+    with open(f"{model_name}-metrics.p", 'rb') as fp:
+        metrics = pickle.load(fp)
+
+    return loaded_model, metrics
+
+
+resize_model_params = generate_model_parameters(resize_records, "resize")
+sparse_model_params = generate_model_parameters(sparse_records, "sparse")
+noisy_sparse_model_params = generate_model_parameters(noisy_sparse_records, "noisy_sparse")
+all_mixed_model_params = generate_model_parameters(all_mixed_records, "all_mixed")
+all_augmented_model_params = generate_model_parameters(all_mixed_records, "all_augmented")
 
 
 #%%
@@ -225,9 +265,23 @@ config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 sess = tf.Session(config = config)
 
-total_epochs = 10
+total_epochs = 2
 # total_epochs = 200
+
 fit_model(resize_model_params, epochs=total_epochs)
+fit_model(sparse_model_params, epochs=total_epochs)
+fit_model(noisy_sparse_model_params, epochs=total_epochs)
+fit_model(all_mixed_model_params, epochs=total_epochs)
+fit_model(all_augmented_model_params, epochs=total_epochs, use_datagen=True)
+
+save_model(resize_model_params)
+save_model(sparse_model_params)
+save_model(noisy_sparse_model_params)
+save_model(all_mixed_model_params)
+save_model(all_augmented_model_params)
+
+# %%
+
 # # %%
 # # cnn_model.evaluate(x_test, y_test_categorical)
 # test_loss, test_accuracy = cnn_model.evaluate(x_test, y_test_categorical)
