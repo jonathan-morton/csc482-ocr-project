@@ -1,17 +1,19 @@
 __author__ = 'Jonathan Morton'
+import pickle
 import struct
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from PIL import Image
+from keras.models import load_model as keras_load
+from keras.preprocessing.image import ImageDataGenerator
 from numpy import argmax
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 
 import cnn_model as cnnm
-import imageprocessing
 
 size_record = 8199
 file_count = 33
@@ -93,21 +95,52 @@ def read_kanji(jis_codes):
                         records.append(new_record)
     return records
 
-records = read_kanji(codes)
-#%%
-def preprocess_images(records):
+
+full_records = read_kanji(codes)
+# %%
+import imageprocessing
+
+
+def preprocess_images(records, make_sparse=False):
     new_records = []
     for record in records:
         list_record = list(record)
-        list_record[-1] = imageprocessing.process_image(record[-1])
+        list_record[-1] = imageprocessing.process_image(record[-1], make_sparse=make_sparse)
         new_records.append(tuple(list_record))
     return new_records
 
-records = preprocess_images(records)
+
+def add_noise(records):
+    new_records = []
+    for record in records:
+        list_record = list(record)
+        list_record[-1] = imageprocessing.add_salt_pepper_noise(record[-1], threshold_prob=0.01)
+        new_records.append(tuple(list_record))
+    return new_records
+
+
+resize_records = preprocess_images(full_records, make_sparse=False)
+sparse_records = preprocess_images(full_records, make_sparse=True)
+noisy_sparse_records = add_noise(sparse_records)
+
+all_mixed_records = resize_records + sparse_records + noisy_sparse_records
+np.random.shuffle(all_mixed_records)
 #%%
 plt.interactive(True)
-plt.imshow(records[70][-1],
+plt.imshow(sparse_records[70][-1],
            cmap='gray')  # https://intellij-support.jetbrains.com/hc/en-us/community/posts/115000143610-Problems-with-Interactive-Plotting-in-Debug-Mode-in-PyCharm-Version-2017-1
+
+plt.interactive(True)
+plt.imshow(resize_records[69][-1],
+           cmap='gray')
+
+from importlib import reload
+
+reload(imageprocessing)
+noisy_img = imageprocessing.add_salt_pepper_noise(resize_records[69][-1], 0.01)
+plt.interactive(True)
+plt.imshow(noisy_img,
+           cmap='gray')
 # %%
 
 def test_train_data(records):
@@ -124,7 +157,6 @@ def test_train_data(records):
 
     return num_classes, x_train, x_test, y_train, y_test
 
-# %%
 def one_hot_encode(y_labels):
     label_encoder = LabelEncoder()
     integer_encoded = label_encoder.fit_transform(y_labels)
@@ -140,12 +172,92 @@ def look_up_label(label_encoder, encoded_row, get_kanji=False):
     jis_data = JisData(codes_filename)
     return jis_data.get_character(inverted_hex[0].upper())
 
-num_classes, x_train, x_test, y_train, y_test  = test_train_data(records)
 
-y_train_encoder, y_train_categorical = one_hot_encode(y_train)
-y_test_encoder, y_test_categorical = one_hot_encode(y_test)
-#%%
-cnn_model = cnnm.get_cnn_model(imageprocessing.IMAGE_RESIZE, num_classes)  # TODO Fix number
+def generate_model_parameters(records, model_name):
+    num_classes, x_train, x_test, y_train, y_test = test_train_data(records)
+
+    y_train_encoder, y_train_categorical = one_hot_encode(y_train)
+    y_test_encoder, y_test_categorical = one_hot_encode(y_test)
+    model = cnnm.get_cnn_model(imageprocessing.IMAGE_RESIZE, num_classes)
+    return {
+        "model": model,
+        "model_name": model_name,
+        "num_classes": num_classes,
+        "x_train": x_train,
+        "x_test": x_test,
+        "y_train_encoder": y_train_encoder,
+        "y_train_categorical": y_train_categorical,
+        "y_test_encoder": y_test_encoder,
+        "y_test_categorical": y_test_categorical
+    }
+
+def fit_model(model_parameters, epochs=200, use_datagen=False):
+    metrics = cnnm.Metrics()
+    model = model_parameters["model"]
+
+    x_train = model_parameters["x_train"]
+    y_train_categorical = model_parameters["y_train_categorical"]
+    x_test = model_parameters["x_test"]
+    y_test_categorical = model_parameters["y_test_categorical"]
+
+    batch_size = 8
+    if use_datagen:
+        datagen = ImageDataGenerator(
+            rotation_range=20,
+            width_shift_range=0.2,
+            height_shift_range=0.2,
+            shear_range=0.2,
+            fill_mode="constant"
+        )
+        model.fit_generator(datagen.flow(x_train, y_train_categorical, batch_size=batch_size),
+                            steps_per_epoch=len(x_train) / batch_size,
+                            validation_data=(x_test, y_test_categorical),
+                            epochs=epochs,
+                            callbacks=[metrics]
+                            )
+    else:
+        model.fit(x_train, y_train_categorical,
+                  validation_data=(x_test, y_test_categorical), epochs=epochs, batch_size=batch_size,
+                  callbacks=[metrics]
+                  )
+
+    model_parameters["metrics"] = metrics
+
+
+def evaluate_model(model_parameters):
+    x_test = model_parameters["x_test"]
+    y_test_categorical = model_parameters["y_test_categorical"]
+    model = model_parameters["model"]
+    test_loss, test_accuracy = model.evaluate(x_test, y_test_categorical)
+
+    return test_loss, test_accuracy
+
+
+def save_model(model_parameters):
+    model = model_parameters["model"]
+    name = model_parameters["model_name"]
+    metrics = model_parameters["metrics"]
+    model.save(f"model-{name}.h5")
+
+    with open(f"model-{name}-metrics.p", 'wb') as fp:
+        metrics_to_save = {"precisions": metrics.val_precisions, "recalls": metrics.val_recalls}
+        pickle.dump(metrics_to_save, fp)
+
+
+def load_model_data(model_name):
+    loaded_model = keras_load(f"{model_name}.h5")
+    with open(f"{model_name}-metrics.p", 'rb') as fp:
+        metrics = pickle.load(fp)
+
+    return loaded_model, metrics
+
+
+resize_model_params = generate_model_parameters(resize_records, "resize")
+sparse_model_params = generate_model_parameters(sparse_records, "sparse")
+noisy_sparse_model_params = generate_model_parameters(noisy_sparse_records, "noisy_sparse")
+all_mixed_model_params = generate_model_parameters(all_mixed_records, "all_mixed")
+all_augmented_model_params = generate_model_parameters(all_mixed_records, "all_augmented")
+
 
 #%%
 import tensorflow as tf
@@ -153,14 +265,27 @@ config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 sess = tf.Session(config = config)
 
-metrics = cnnm.Metrics()
-epochs = 200
-cnn_model.fit(x_train, y_train_categorical,
-              validation_data=(x_test, y_test_categorical), epochs=epochs, batch_size=8, callbacks=[metrics])
-# %%
-# cnn_model.evaluate(x_test, y_test_categorical)
-test_loss, test_accuracy = cnn_model.evaluate(x_test, y_test_categorical)
+total_epochs = 2
+# total_epochs = 200
 
-print(f'accuracy = {test_accuracy}, loss = {test_loss}\n')
-print(f'precision = {metrics.val_precisions}\n, recalls = {metrics.val_recalls}\n')
-#test_etlcdb()
+fit_model(resize_model_params, epochs=total_epochs)
+fit_model(sparse_model_params, epochs=total_epochs)
+fit_model(noisy_sparse_model_params, epochs=total_epochs)
+fit_model(all_mixed_model_params, epochs=total_epochs)
+fit_model(all_augmented_model_params, epochs=total_epochs, use_datagen=True)
+
+save_model(resize_model_params)
+save_model(sparse_model_params)
+save_model(noisy_sparse_model_params)
+save_model(all_mixed_model_params)
+save_model(all_augmented_model_params)
+
+# %%
+
+# # %%
+# # cnn_model.evaluate(x_test, y_test_categorical)
+# test_loss, test_accuracy = cnn_model.evaluate(x_test, y_test_categorical)
+#
+# print(f'accuracy = {test_accuracy}, loss = {test_loss}\n')
+# print(f'precision = {metrics.val_precisions}\n, recalls = {metrics.val_recalls}\n')
+# cnn_model.save('sparse_model.h5')

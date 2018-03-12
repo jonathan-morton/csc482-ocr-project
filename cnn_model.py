@@ -25,7 +25,6 @@ class Metrics(Callback):
         print(f" — val_precision: {_val_precision} — val_recall {_val_recall}")
         return
 
-
 def get_cnn_model(image_size, classification_num):
     model = models.Sequential()
     model.add(layers.Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(image_size, image_size, 1)))
@@ -39,7 +38,7 @@ def get_cnn_model(image_size, classification_num):
     model.add(layers.Dense(classification_num, activation='softmax'))
 
     # sgd = optimizers.SGD(lr=0.1, decay=1e-6, momentum=1.9)
-    metrics = Metrics()
+
     model.compile(optimizers.Adam(lr=1e-5), 'categorical_crossentropy', metrics=['accuracy'])
 
     return model
