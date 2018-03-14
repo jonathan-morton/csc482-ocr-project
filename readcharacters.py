@@ -137,7 +137,7 @@ plt.imshow(resize_records[69][-1],
 from importlib import reload
 
 reload(imageprocessing)
-noisy_img = imageprocessing.add_salt_pepper_noise(resize_records[69][-1], 0.01)
+noisy_img = imageprocessing.add_salt_pepper_noise(noisy_sparse_records[69][-1], 0.01)
 plt.interactive(True)
 plt.imshow(noisy_img,
            cmap='gray')
@@ -209,19 +209,21 @@ def fit_model(model_parameters, epochs=200, use_datagen=False):
             shear_range=0.2,
             fill_mode="constant"
         )
-        model.fit_generator(datagen.flow(x_train, y_train_categorical, batch_size=batch_size),
-                            steps_per_epoch=len(x_train) / batch_size,
-                            validation_data=(x_test, y_test_categorical),
-                            epochs=epochs,
+        history = model.fit_generator(datagen.flow(x_train, y_train_categorical, batch_size=batch_size),
+                                      steps_per_epoch=len(x_train) / batch_size,
+                                      validation_data=(x_test, y_test_categorical),
+                                      epochs=epochs,
+                                      verbose=2,
+                                      callbacks=[metrics]
+                                      )
+    else:
+        history = model.fit(x_train, y_train_categorical,
+                            validation_data=(x_test, y_test_categorical), epochs=epochs, batch_size=batch_size,
                             callbacks=[metrics]
                             )
-    else:
-        model.fit(x_train, y_train_categorical,
-                  validation_data=(x_test, y_test_categorical), epochs=epochs, batch_size=batch_size,
-                  callbacks=[metrics]
-                  )
 
     model_parameters["metrics"] = metrics
+    return history
 
 
 def evaluate_model(model_parameters):
@@ -237,10 +239,11 @@ def save_model(model_parameters):
     model = model_parameters["model"]
     name = model_parameters["model_name"]
     metrics = model_parameters["metrics"]
+    history = model_parameters["history"].history
     model.save(f"model-{name}.h5")
 
     with open(f"model-{name}-metrics.p", 'wb') as fp:
-        metrics_to_save = {"precisions": metrics.val_precisions, "recalls": metrics.val_recalls}
+        metrics_to_save = {"precisions": metrics.val_precisions, "recalls": metrics.val_recalls, "history": history}
         pickle.dump(metrics_to_save, fp)
 
 
@@ -265,14 +268,15 @@ config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 sess = tf.Session(config = config)
 
-total_epochs = 2
-# total_epochs = 200
+# total_epochs = 2
+total_epochs = 200
 
-fit_model(resize_model_params, epochs=total_epochs)
-fit_model(sparse_model_params, epochs=total_epochs)
-fit_model(noisy_sparse_model_params, epochs=total_epochs)
-fit_model(all_mixed_model_params, epochs=total_epochs)
-fit_model(all_augmented_model_params, epochs=total_epochs, use_datagen=True)
+resize_model_params["history"] = fit_model(resize_model_params, epochs=total_epochs)
+sparse_model_params["history"] = fit_model(sparse_model_params, epochs=total_epochs)
+noisy_sparse_model_params["history"] = fit_model(noisy_sparse_model_params, epochs=total_epochs)
+all_mixed_model_params["history"] = fit_model(all_mixed_model_params, epochs=total_epochs)
+total_epochs *= 2
+all_augmented_model_params["history"] = fit_model(all_augmented_model_params, epochs=total_epochs, use_datagen=True)
 
 save_model(resize_model_params)
 save_model(sparse_model_params)
@@ -280,12 +284,54 @@ save_model(noisy_sparse_model_params)
 save_model(all_mixed_model_params)
 save_model(all_augmented_model_params)
 
+
 # %%
 
-# # %%
-# # cnn_model.evaluate(x_test, y_test_categorical)
-# test_loss, test_accuracy = cnn_model.evaluate(x_test, y_test_categorical)
+# %%
+def create_epochs_plots(history, model_name):
+    loss = history.history['loss']
+    val_loss = history.history['val_loss']
+    accuracy = history.history['acc']
+    val_accuracy = history.history['val_acc']
+
+    epochs = range(1, len(loss) + 1)
+
+    plt.interactive(True)
+    plt.figure()
+    plt.plot(epochs, loss, 'r', label=f"{model_name}: Training Loss")
+    plt.plot(epochs, val_loss, 'b', label=f"{model_name}: Validation Loss")
+    plt.title(f"{model_name}: Training and Validation Loss")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.show()
+    plt.savefig(f"plot-{model_name}-loss.png")
+
+    plt.interactive(True)
+    plt.figure()
+    plt.plot(epochs, accuracy, 'r', label=f"{model_name}: Training Accuracy")
+    plt.plot(epochs, val_accuracy, 'b', label=f"{model_name}: Validation Accuracy")
+    plt.title(f"{model_name}: Training and Validation Accuracy")
+    plt.xlabel("Epochs")
+    plt.ylabel("Accuracy")
+    plt.legend()
+    axes = plt.gca()
+    axes.set_ylim(0, 1)
+    plt.show()
+    plt.savefig(f"plot-{model_name}-accuracy.png")
+
+
+create_epochs_plots(resize_model_params["history"], "Resized")
+create_epochs_plots(sparse_model_params["history"], "Sparse")
+create_epochs_plots(noisy_sparse_model_params["history"], "Noisy Sparse")
+create_epochs_plots(all_mixed_model_params["history"], "All Mixed")
+create_epochs_plots(all_augmented_model_params["history"], "All Augmented")
 #
-# print(f'accuracy = {test_accuracy}, loss = {test_loss}\n')
-# print(f'precision = {metrics.val_precisions}\n, recalls = {metrics.val_recalls}\n')
-# cnn_model.save('sparse_model.h5')
+#
+# # # %%
+# # # cnn_model.evaluate(x_test, y_test_categorical)
+# # test_loss, test_accuracy = cnn_model.evaluate(x_test, y_test_categorical)
+# #
+# # print(f'accuracy = {test_accuracy}, loss = {test_loss}\n')
+# # print(f'precision = {metrics.val_precisions}\n, recalls = {metrics.val_recalls}\n')
+# # cnn_model.save('sparse_model.h5')
