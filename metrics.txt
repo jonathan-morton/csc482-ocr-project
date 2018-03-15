@@ -1,0 +1,145 @@
+Information for Resized
+Epoch 200
+Loss: 0.8895983080892168
+Validation Loss: 0.9212141408987925
+Accuracy: 0.7751479290293518
+Validation Accuracy: 0.7304964539007093
+
+Metrics for 火
+Precision: 0.8571428571428571
+Recall: 0.24
+Metrics for 金
+Precision: 0.9285714285714286
+Recall: 0.5652173913043478
+Metrics for 月
+Precision: 0.8125
+Recall: 0.325
+Metrics for 水
+Precision: 1.0
+Recall: 0.025
+Metrics for 土
+Precision: 1.0
+Recall: 0.020833333333333332
+Metrics for 日
+Precision: 0.7428571428571429
+Recall: 0.6046511627906976
+Metrics for 木
+Precision: 0.8888888888888888
+Recall: 0.8
+**************************************************
+Information for Sparse
+Epoch 200
+Loss: 0.07488673126336033
+Validation Loss: 0.16657106565139818
+Accuracy: 0.9822485207100592
+Validation Accuracy: 0.9397163120567376
+
+Metrics for 火
+Precision: 0.9210526315789473
+Recall: 0.875
+Metrics for 金
+Precision: 0.9523809523809523
+Recall: 1.0
+Metrics for 月
+Precision: 0.9210526315789473
+Recall: 0.9459459459459459
+Metrics for 水
+Precision: 0.9574468085106383
+Recall: 0.9183673469387755
+Metrics for 土
+Precision: 0.972972972972973
+Recall: 0.9
+Metrics for 日
+Precision: 1.0
+Recall: 0.9285714285714286
+Metrics for 木
+Precision: 0.9393939393939394
+Recall: 0.9117647058823529
+**************************************************
+Information for Noisy Sparse
+Epoch 200
+Loss: 0.14022722854416753
+Validation Loss: 0.2188493995167685
+Accuracy: 0.9609467455621302
+Validation Accuracy: 0.9290780141843972
+
+Metrics for 火
+Precision: 0.9047619047619048
+Recall: 0.95
+Metrics for 金
+Precision: 1.0
+Recall: 0.9615384615384616
+Metrics for 月
+Precision: 0.9767441860465116
+Recall: 0.9545454545454546
+Metrics for 水
+Precision: 0.9285714285714286
+Recall: 0.8297872340425532
+Metrics for 土
+Precision: 0.9722222222222222
+Recall: 0.9210526315789473
+Metrics for 日
+Precision: 0.9512195121951219
+Recall: 0.9069767441860465
+Metrics for 木
+Precision: 0.9069767441860465
+Recall: 0.8863636363636364
+**************************************************
+Information for All Mixed
+Epoch 200
+Loss: 0.12512670143110644
+Validation Loss: 0.1833342167837259
+Accuracy: 0.9696252465483235
+Validation Accuracy: 0.9479905437352246
+
+Metrics for 火
+Precision: 1.0
+Recall: 0.9727272727272728
+Metrics for 金
+Precision: 0.984375
+Recall: 0.9618320610687023
+Metrics for 月
+Precision: 0.9203539823008849
+Recall: 0.9203539823008849
+Metrics for 水
+Precision: 0.9823008849557522
+Recall: 0.9173553719008265
+Metrics for 土
+Precision: 1.0
+Recall: 0.9649122807017544
+Metrics for 日
+Precision: 0.9461538461538461
+Recall: 0.917910447761194
+Metrics for 木
+Precision: 0.9454545454545454
+Recall: 0.8455284552845529
+**************************************************
+Information for All Augmented
+Epoch 400
+Loss: 0.7824950823652204
+Validation Loss: 0.6929737214641932
+Accuracy: 0.7053254438575203
+Validation Accuracy: 0.7293144208037825
+
+Metrics for 火
+Precision: 0.9710144927536232
+Recall: 0.5877192982456141
+Metrics for 金
+Precision: 0.6178010471204188
+Recall: 0.9752066115702479
+Metrics for 月
+Precision: 0.925
+Recall: 0.6218487394957983
+Metrics for 水
+Precision: 0.9367088607594937
+Recall: 0.5873015873015873
+Metrics for 土
+Precision: 1.0
+Recall: 0.5826771653543307
+Metrics for 日
+Precision: 0.9466666666666667
+Recall: 0.6283185840707964
+Metrics for 木
+Precision: 0.9438202247191011
+Recall: 0.6666666666666666
+**************************************************

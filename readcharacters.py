@@ -240,6 +240,13 @@ def save_model(model_parameters):
     name = model_parameters["model_name"]
     metrics = model_parameters["metrics"]
     history = model_parameters["history"].history
+
+    y_train_classes = model_parameters["y_train_encoder"].classes_
+    y_test_classes = model_parameters["y_test_encoder"].classes_
+
+    np.save('classes_y_train.npy', y_train_classes)
+    np.save('classes_y_test.npy', y_test_classes)
+
     model.save(f"model-{name}.h5")
 
     with open(f"model-{name}-metrics.p", 'wb') as fp:
@@ -304,8 +311,8 @@ def create_epochs_plots(history, model_name):
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
     plt.legend()
+    plt.savefig(f"plots/plot-{model_name}-loss.png")
     plt.show()
-    plt.savefig(f"plot-{model_name}-loss.png")
 
     plt.interactive(True)
     plt.figure()
@@ -317,10 +324,11 @@ def create_epochs_plots(history, model_name):
     plt.legend()
     axes = plt.gca()
     axes.set_ylim(0, 1)
+    plt.savefig(f"plots/plot-{model_name}-accuracy.png")
     plt.show()
-    plt.savefig(f"plot-{model_name}-accuracy.png")
 
 
+# %%
 create_epochs_plots(resize_model_params["history"], "Resized")
 create_epochs_plots(sparse_model_params["history"], "Sparse")
 create_epochs_plots(noisy_sparse_model_params["history"], "Noisy Sparse")
@@ -335,3 +343,44 @@ create_epochs_plots(all_augmented_model_params["history"], "All Augmented")
 # # print(f'accuracy = {test_accuracy}, loss = {test_loss}\n')
 # # print(f'precision = {metrics.val_precisions}\n, recalls = {metrics.val_recalls}\n')
 # # cnn_model.save('sparse_model.h5')
+# %%
+def print_metrics(model_name, history, metrics, y_test_encoder):
+    jis_data = JisData(codes_filename)
+
+    loss = history.history['loss']
+    val_loss = history.history['val_loss']
+    accuracy = history.history['acc']
+    val_accuracy = history.history['val_acc']
+
+    precisions = metrics.val_precisions
+    recalls = metrics.val_recalls
+
+    print(f"Information for {model_name}\n")
+    print(f"Epoch {len(loss)}")
+    print(f"Loss: {loss[-1]}")
+    print(f"Validation Loss: {val_loss[-1]}")
+    print(f"Accuracy: {accuracy[-1]}")
+    print(f"Validation Accuracy: {val_accuracy[-1]}")
+    print("\n")
+    for j in range(0, len(y_test_encoder.classes_)):
+        jis_code = y_test_encoder.classes_[j]
+        kanji = jis_data.get_character(jis_code)
+        print(f"Metrics for {kanji}")
+        print(f"Precision: {precisions[-1][j]}")
+        print(f"Recall: {recalls[-1][j]}\n")
+    print("\n")
+    print("**************************************************")
+
+
+# %%
+# TODO Only works with model_params, will need different parameters to work from a saved model
+print_metrics("Resized", resize_model_params["history"], resize_model_params["metrics"],
+              resize_model_params["y_test_encoder"])
+print_metrics("Sparse", sparse_model_params["history"], sparse_model_params["metrics"],
+              sparse_model_params["y_test_encoder"])
+print_metrics("Noisy Sparse", noisy_sparse_model_params["history"], noisy_sparse_model_params["metrics"],
+              noisy_sparse_model_params["y_test_encoder"])
+print_metrics("All Mixed", all_mixed_model_params["history"], all_mixed_model_params["metrics"],
+              all_mixed_model_params["y_test_encoder"])
+print_metrics("All Augmented", all_augmented_model_params["history"], all_augmented_model_params["metrics"],
+              all_augmented_model_params["y_test_encoder"])
