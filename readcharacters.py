@@ -344,6 +344,7 @@ create_epochs_plots(all_augmented_model_params["history"], "All Augmented")
 # # print(f'precision = {metrics.val_precisions}\n, recalls = {metrics.val_recalls}\n')
 # # cnn_model.save('sparse_model.h5')
 # %%
+# TODO fix hard coded epochs
 def print_metrics(model_name, history, metrics, y_test_encoder):
     jis_data = JisData(codes_filename)
 
@@ -356,18 +357,18 @@ def print_metrics(model_name, history, metrics, y_test_encoder):
     recalls = metrics.val_recalls
 
     print(f"Information for {model_name}\n")
-    print(f"Epoch {len(loss)}")
-    print(f"Loss: {loss[-1]}")
-    print(f"Validation Loss: {val_loss[-1]}")
-    print(f"Accuracy: {accuracy[-1]}")
-    print(f"Validation Accuracy: {val_accuracy[-1]}")
+    print(f"Epoch {200}")
+    print(f"Loss: {loss[199]}")
+    print(f"Validation Loss: {val_loss[199]}")
+    print(f"Accuracy: {accuracy[199]}")
+    print(f"Validation Accuracy: {val_accuracy[199]}")
     print("\n")
     for j in range(0, len(y_test_encoder.classes_)):
         jis_code = y_test_encoder.classes_[j]
         kanji = jis_data.get_character(jis_code)
         print(f"Metrics for {kanji}")
-        print(f"Precision: {precisions[-1][j]}")
-        print(f"Recall: {recalls[-1][j]}\n")
+        print(f"Precision: {precisions[199][j]}")
+        print(f"Recall: {recalls[199][j]}\n")
     print("\n")
     print("**************************************************")
 
