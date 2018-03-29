@@ -121,6 +121,8 @@ def add_noise(records):
 
 resize_records = preprocess_images(full_records, make_sparse=False)
 sparse_records = preprocess_images(full_records, make_sparse=True)
+
+# TODO validation should not have noise added
 noisy_sparse_records = add_noise(sparse_records)
 
 all_mixed_records = resize_records + sparse_records + noisy_sparse_records
@@ -206,7 +208,7 @@ def fit_model(model_parameters, epochs=200, use_datagen=False):
             rotation_range=20,
             width_shift_range=0.2,
             height_shift_range=0.2,
-            shear_range=0.2,
+            shear_range=0.2,  #TODO degrees not a percentage, change after paper
             fill_mode="constant"
         )
         history = model.fit_generator(datagen.flow(x_train, y_train_categorical, batch_size=batch_size),
@@ -282,7 +284,6 @@ resize_model_params["history"] = fit_model(resize_model_params, epochs=total_epo
 sparse_model_params["history"] = fit_model(sparse_model_params, epochs=total_epochs)
 noisy_sparse_model_params["history"] = fit_model(noisy_sparse_model_params, epochs=total_epochs)
 all_mixed_model_params["history"] = fit_model(all_mixed_model_params, epochs=total_epochs)
-total_epochs *= 2
 all_augmented_model_params["history"] = fit_model(all_augmented_model_params, epochs=total_epochs, use_datagen=True)
 
 save_model(resize_model_params)
