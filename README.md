@@ -125,5 +125,8 @@ A. K. Jain, R. P. W. Duin, and J. Mao, &quot;Statistical pattern recognition: A 
 ![](plots/plot-All-Mixed-loss.png)<br/>
 ![](plots/plot-All-Mixed-accuracy.png)<br/>
 
+![](plots/plot-All-Augmented-loss.png)<br/>
+![](plots/plot-All-Augmented-accuracy.png)<br/>
+
 
 
