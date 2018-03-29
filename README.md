@@ -1,19 +1,19 @@
 CSC482 Final project
 Jonathan Morton | Jun Tae Son
 
-#Character recognition using a CNN
+# Character recognition using a CNN
 
-##Abstract
+## Abstract
 Japanese is one of the most challenging languages for handwritten character recognition due to its tremendous volume of characters and possible variations in handwritten stroke. However, the development of powerful GPUs and various character recognition techniques has significantly improved learning efficiency and performance of recognition models. In this paper, we examined the performance of a handwritten Japanese character recognition model based on a deep convolutional neural network architecture and explored the robustness of the algorithm by adding sparsity, noise, and random distortion such as rotation, width/height shift, and shear transformation. We tested the CR model on a subset of the ETL Character Database. The combined data set with resized, sparse, and noisy sparse characters achieved 94.8% accuracy on the validation set.
 
-##1. Introduction
+## 1. Introduction
 Since the first character recognizer for Latin characters was invented in the middle of 1940s, many optical character recognition approaches for different languages have been developed. (N. Arica 2001). In this paper, we will explore one form of a character recognition system, focusing on Japanese characters. The Japanese language is written in the mixture of the following three different scripts; 46 characters of hiragana (ひらがな), 46 characters of katakana (カタカナ), and about 2,000 of daily-used Chinese characters (kanji 漢字). Japanese OCR is challenging because there is a tremendous amount of characters as well as possible variations in hand written strokes.
 
 In this project, we designed a Deep Convolutional Neural Networks model for recognizing handwritten Japanese character. Since our computing system was limited, we took a subset of 7 kanji characters. We applied character distortion such as rotation, sparsity and noise addition to generate artificial characters so that we can ensure the robustness of the algorithm and how the character distortion affects the performance. 
 
 In the next sections, we will discuss 1) the background of character recognition approaches, 2) methodologies of the proposed algorithm that we implemented in this project, 3) evaluation results of the proposed algorithm, and lastly 4) our conclusion and limitations of our model.
 
-##2. Background
+## 2. Background
 Anil et al. suggested the following four best approaches for character recognition in 2000; 1) template matching, 2) statistical classification, 3) structural matching, and 4) neural networks. 
 
 We will discuss first three approaches in this section and explore neural network architecture further in the methodology section.
@@ -24,7 +24,7 @@ _Statistical techniques_ are another approach for the character recognition syst
 
 _Structural pattern recognition_ is also a significant technique in the CR fields. It assumes that the pattern structures extracted from text are quantifiable, thus we can find relations among the structural patterns. Based on the rule of linguistics (e.g. grammer) and the stored structural description (e.g. stroke and relationships among characters), structural approach attempts to create production rules to recognize unknown character so that it can decrease the recognition error.
 
-##3. Methodology
+## 3. Methodology
 **3-1. Data**
 The dataset used in this project comes from the ETL Character Database collected by the National Institute of Advanced Industrial Science and Technology (AIST) under cooperation with Japan Electronics and Information Technology Industries Association, universities and other research organizations for character recognition researches from 1973 to 1984.
 
@@ -37,11 +37,11 @@ In the original dataset (ETL-8G), there are 956 unique Japanese characters and 1
 **3-2. Pre-processing**
 We normalized all pixel values into the range [0, 1] to speed training of the weights for the neural network. Due to memory constraints, we transformed the images to be 32x32. After resizing, the following five datasets were created:
 
-**Resized:** The 32x32 resized images 
-**Sparse:** The images were converted to a sparse array by inverting the image and using the Otsu thresholding method to separate the character from the background to make a binary image
-**Noisy Sparse:** The sparse images with salt and pepper noise added
-**Mixed:** Combined data set with resized, sparse, and noisy sparse characters
-Augmented: Generated images from the mixed data set that have a random set of augmentations to the image; rotations up to 20 degrees, width and height shift of up to 20%, and shear transforms up to 0.2 degrees
+**Resized:** The 32x32 resized images<br/>
+**Sparse:** The images were converted to a sparse array by inverting the image and using the Otsu thresholding method to separate the character from the background to make a binary image<br/>
+**Noisy Sparse:** The sparse images with salt and pepper noise added<br/>
+**Mixed:** Combined data set with resized, sparse, and noisy sparse characters<br/>
+**Augmented**: Generated images from the mixed data set that have a random set of augmentations to the image; rotations up to 20 degrees, width and height shift of up to 20%, and shear transforms up to 0.2 degrees
 
 ![Example Sparse Character](quiver-image-url/3FEDE98087D6F18A799E392DC91D474B.jpg)<br/>
 Example Sparse Character
@@ -55,7 +55,7 @@ The model consisted of three convolution layers with a filter size of 3x3 and a 
  
 The model trained on each data set for 200 epochs with a batch size of 8 (due to memory issues) and used an Adam optimizer with an initial learning rate of 1e-5 and loss function of categorical_crossentropy.
 
-##4. Evaluation Results
+## 4. Evaluation Results
 We trained the model on five different data sets to see how image variations affect the classification performance. According to the accuracy score results shown below, the sparse array representation of data significantly improved the performance from 73.05% to 93.97% by boosting the learning speed. Adding salt and pepper noise on the sparse data slightly decreased the classification accuracy. The mixed data with all resized, sparse, and noisy sparse images achieved the highest accuracy score (94.80%) due to the larger set of training images. However, the random distortion of the images such as rotation and height/width shift sharply decreased the accuracy by 67.26%.
 
 | **Dataset** | **Accuracy** |
@@ -81,11 +81,11 @@ Within the mixed model, relatively high recall and precision were observed for n
 As Graham showed, all data sets using sparse data trained much more efficiently. For comparison, the accuracy on the resized data vs the accuracy on the mixed data over time:
 
 ![Resized Training and Validation Accuracy](plots/plot-Resized-accuracy.png)<br/>
-![All Mixed Training and Validation Accuracy](plots/plot-All Mixed-accuracy.png)<br/>
+![All Mixed Training and Validation Accuracy](plots/plot-All-Mixed-accuracy.png)<br/>
 
 Over 200 epochs, the mixed model was able to achieve the best result. However, none of the models showed major signs of overfitting to the data. Given faster hardware environment, training the models for more epochs is expected to show better absolute accuracy, recall, and precision of the models before overfitting occurs. The augmented data set had the worst overall performance at 200 epochs, but given the random nature of the data, a longer training time would be needed to fully gain insight into its accuracy.
 
-**5. Conclusion**
+## 5. Conclusion
 
 Ultimately a model with a combination of the actual handwritten character, the sparse array representation, and noisy sparse array representation proved the most accurate over 200 epochs with an overall accuracy of 94.80% The models with sparse array characters were all able to achieve higher accuracy over a shorter amount of time compared to the other models. Noise lowered the accuracy compared to clean sparse representation, but only by 1%, with little difference in efficiency of training. The effects of adding noise to increase the robustness of network is inconclusive with such close results.
 
@@ -112,17 +112,18 @@ Lai, S., Jin, L., &amp; Yang, W. (2017, April 1). Toward high-performance online
 A. K. Jain, R. P. W. Duin, and J. Mao, &quot;Statistical pattern recognition: A review,&quot; IEEE Trans. Pattern Anal. Machine Intell., vol. 22, pp. 4–38, Jan. 2000.
 
 **Appendix**
+
 ![](plots/plot-Resized-loss.png)<br/>
 ![](plots/plot-Resized-accuracy.png)<br/>
 
 ![](plots/plot-Sparse-loss.png)<br/>
 ![](plots/plots/plot-Sparse-accuracy.png)<br/>
 
-![](plots/plot-Noisy Sparse-loss.png)<br/>
-![](plots/plot-Noisy Sparse-accuracy.png)<br/>
+![](plots/plot-Noisy-Sparse-loss.png)<br/>
+![](plots/plot-Noisy-Sparse-accuracy.png)<br/>
 
-![](plots/plot-All Mixed-loss.png)<br/>
-![](plots/plot-All Mixed-accuracy.png)<br/>
+![](plots/plot-All-Mixed-loss.png)<br/>
+![](plots/plot-All-Mixed-accuracy.png)<br/>
 
 
 
